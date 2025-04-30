@@ -79,9 +79,13 @@ class Player(pygame.sprite.Sprite):
         dy = self.vel_y
 
         self.on_ground = False
+        self.platform_dx = 0
+
+        future_rect = self.rect.move(0, dy)
         for platform in platform_group:
-            if platform.rect.colliderect(self.rect.x, self.rect.y + dy, self.rect.width, self.rect.height):
-                if self.vel_y > 0:
+            if platform.rect.colliderect(future_rect):
+                # Игрок падает сверху на платформу
+                if self.vel_y > 0 and self.rect.bottom <= platform.rect.top + 10:
                     dy = platform.rect.top - self.rect.bottom
                     self.vel_y = 0
                     self.on_ground = True
@@ -147,19 +151,15 @@ class Fireball(pygame.sprite.Sprite):
 # Логика проверок
 def can_reach(prev_platform, new_platform):
     dx = abs(new_platform.rect.centerx - prev_platform.rect.centerx)
-    dy = prev_platform.rect.top - new_platform.rect.bottom
-    return dx < MAX_HORIZONTAL_DISTANCE and dy > -MAX_JUMP_HEIGHT
+    dy = prev_platform.rect.top - new_platform.rect.top  # сравнение по верхним границам
+    return dx <= MAX_HORIZONTAL_DISTANCE and 0 <= dy <= MAX_JUMP_HEIGHT
 
 
 def coin_is_reachable(platform, coin):
-    coin_to_platform_y = coin.rect.bottom - platform.rect.top
-    if coin_to_platform_y > MAX_JUMP_HEIGHT or coin_to_platform_y < -20:
-        return False
+    dy = platform.rect.top - coin.rect.centery
+    dx = abs(coin.rect.centerx - platform.rect.centerx)
 
-    if abs(coin.rect.centerx - platform.rect.centerx) > MAX_HORIZONTAL_DISTANCE:
-        return False
-
-    return True
+    return 0 <= dy <= MAX_JUMP_HEIGHT and dx <= MAX_HORIZONTAL_DISTANCE
 
 
 def generate_random_level(level_num):
@@ -180,7 +180,9 @@ def generate_random_level(level_num):
             h = 20
 
             # Генерируем только "достижимые" координаты
-            y = random.randint(last_platform.rect.top - MAX_JUMP_HEIGHT - 20, last_platform.rect.top - 40)
+            min_y = max(60, last_platform.rect.top - MAX_JUMP_HEIGHT - 20)
+            max_y = max(80, last_platform.rect.top - 40)
+            y = random.randint(min_y, max_y)
             x = random.randint(
                 max(0, last_platform.rect.centerx - MAX_HORIZONTAL_DISTANCE),
                 min(WIDTH - w, last_platform.rect.centerx + MAX_HORIZONTAL_DISTANCE)
@@ -192,7 +194,7 @@ def generate_random_level(level_num):
 
             if can_reach(last_platform, candidate):
                 coin_x = x + w // 2
-                coin_y = y - 30
+                coin_y = max(30, y - 30)
                 coin = Coin(coin_x, coin_y)
 
                 if coin_is_reachable(candidate, coin):
