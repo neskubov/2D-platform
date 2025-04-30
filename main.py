@@ -17,7 +17,6 @@ SKY_BLUE = (135, 206, 235)
 gravity = 0.5
 jump_power = -10
 player_speed = 5
-fireball_interval = 5000  # миллисекунд
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("2D Платформер")
@@ -134,7 +133,33 @@ levels = [
         ],
         "coins": [
             Coin(220, 430), Coin(620, 230)
-        ]
+        ],
+        "fireball_interval": 5000
+    },
+    {
+        "platforms": [
+            Platform(0, HEIGHT - 40, WIDTH, 40),
+            Platform(150, 400, 120, 20, moving=True, speed=3),
+            Platform(300, 300, 120, 20),
+            Platform(500, 200, 120, 20, moving=True, speed=3)
+        ],
+        "coins": [
+            Coin(160, 380), Coin(520, 180)
+        ],
+        "fireball_interval": 4000
+    },
+    {
+        "platforms": [
+            Platform(0, HEIGHT - 40, WIDTH, 40),
+            Platform(100, 450, 120, 20, moving=True, speed=4),
+            Platform(300, 350, 120, 20),
+            Platform(500, 250, 120, 20, moving=True, speed=4),
+            Platform(700, 150, 80, 20)
+        ],
+        "coins": [
+            Coin(120, 430), Coin(520, 230), Coin(710, 130)
+        ],
+        "fireball_interval": 3000
     }
 ]
 
@@ -151,6 +176,7 @@ lives = 3
 paused = False
 last_fireball_time = pygame.time.get_ticks()
 
+
 def load_level(index):
     platform_group.empty()
     coin_group.empty()
@@ -160,7 +186,6 @@ def load_level(index):
     for c in levels[index]["coins"]:
         coin_group.add(c)
 
-load_level(current_level)
 
 def draw_ui():
     screen.blit(font.render(f"Счёт: {score}", True, BLACK), (10, 10))
@@ -168,12 +193,25 @@ def draw_ui():
     if paused:
         screen.blit(font.render("Пауза", True, BLACK), (WIDTH//2 - 40, HEIGHT//2))
 
+
 def show_game_over():
     screen.fill(BLACK)
     text = font.render("Game Over", True, WHITE)
     screen.blit(text, (WIDTH // 2 - 60, HEIGHT // 2))
     pygame.display.flip()
     pygame.time.delay(2000)
+
+
+def show_level_transition(level_number):
+    screen.fill(SKY_BLUE)
+    text = font.render(f"Уровень {level_number + 1}", True, BLACK)
+    screen.blit(text, (WIDTH // 2 - 60, HEIGHT // 2))
+    pygame.display.flip()
+    pygame.time.delay(2000)
+
+
+load_level(current_level)
+show_level_transition(current_level)
 
 # Главный цикл игры
 running = True
@@ -199,7 +237,8 @@ while running:
             score += 10
             coin_sound.play()
 
-        if pygame.time.get_ticks() - last_fireball_time > fireball_interval:
+        current_interval = levels[current_level]["fireball_interval"]
+        if pygame.time.get_ticks() - last_fireball_time > current_interval:
             x_pos = random.randint(0, WIDTH - 30)
             fireball_group.add(Fireball(x_pos))
             last_fireball_time = pygame.time.get_ticks()
@@ -215,6 +254,14 @@ while running:
                 show_game_over()
                 running = False
 
+        if not coin_group and current_level < len(levels) - 1:
+            current_level += 1
+            show_level_transition(current_level)
+            load_level(current_level)
+            player.rect.topleft = (100, 500)
+            player.vel_y = 0
+            last_fireball_time = pygame.time.get_ticks()
+
     screen.fill(SKY_BLUE)
     platform_group.draw(screen)
     coin_group.draw(screen)
@@ -226,3 +273,4 @@ while running:
 
 pygame.quit()
 sys.exit()
+
