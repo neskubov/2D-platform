@@ -43,6 +43,9 @@ except Exception as e:
 
 # Изображения
 try:
+    BACKGROUND_IMG = pygame.transform.scale(
+        pygame.image.load("images/background.png").convert(), (WIDTH, HEIGHT)
+    )
     PLAYER_NORMAL_IMG = pygame.transform.scale(pygame.image.load("images/cat_basic.png").convert_alpha(), (60, 60))
     PLAYER_BURNED_IMG = pygame.transform.scale(pygame.image.load("images/cat_burned_f3.png").convert_alpha(), (60, 60))
     COIN_IMG = pygame.transform.scale(pygame.image.load("images/coin.png").convert_alpha(), (20, 20))
@@ -336,7 +339,7 @@ while running:
                 pygame.time.delay(3000)
                 reset_game()
 
-    screen.fill(SKY_BLUE)
+    screen.blit(BACKGROUND_IMG, (0, 0))
     platform_group.draw(screen)
     coin_group.draw(screen)
     fireball_group.draw(screen)
