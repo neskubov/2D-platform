@@ -25,10 +25,18 @@ font = pygame.font.SysFont("Arial", 24)
 
 # Звук
 pygame.mixer.init()
-jump_sound = pygame.mixer.Sound("sounds/jump.wav")
-coin_sound = pygame.mixer.Sound("sounds/coin.wav")
-hurt_sound = pygame.mixer.Sound("sounds/hurt.wav")
-game_over_sound = pygame.mixer.Sound("sounds/game_over.wav")
+
+def safe_load_sound(path):
+    if os.path.exists(path):
+        return pygame.mixer.Sound(path)
+    else:
+        print(f"Звук не найден: {path}")
+        return None
+
+jump_sound = safe_load_sound("sounds/jump.wav")
+coin_sound = safe_load_sound("sounds/coin.wav")
+hurt_sound = safe_load_sound("sounds/hurt.wav")
+game_over_sound = safe_load_sound("sounds/game_over.wav")
 
 # Загрузка изображений
 PLAYER_NORMAL_IMG = pygame.transform.scale(pygame.image.load("images/cat_basic.png").convert_alpha(), (60, 60))
@@ -46,6 +54,7 @@ class Player(pygame.sprite.Sprite):
         self.burned = False
         self.burned_time = 0
         self.platform_dx = 0
+        self.direction = 0
 
     def update(self, keys):
         if self.burned and pygame.time.get_ticks() - self.burned_time >= 2000:
@@ -55,8 +64,12 @@ class Player(pygame.sprite.Sprite):
         dx = 0
         if keys[pygame.K_a]:
             dx = -player_speed
-        if keys[pygame.K_d]:
+            self.direction = -1
+        elif keys[pygame.K_d]:
             dx = player_speed
+            self.direction = 1
+        else:
+            self.direction = 0
 
         self.vel_y += gravity
         dy = self.vel_y
@@ -78,7 +91,10 @@ class Player(pygame.sprite.Sprite):
     def jump(self):
         if self.on_ground:
             self.vel_y = jump_power
-            jump_sound.play()
+            if self.direction != 0:
+                self.rect.x += self.direction * 10
+            if jump_sound:
+                jump_sound.play()
             self.platform_dx = 0
 
     def take_hit(self):
@@ -86,7 +102,8 @@ class Player(pygame.sprite.Sprite):
             self.image = PLAYER_BURNED_IMG
             self.burned = True
             self.burned_time = pygame.time.get_ticks()
-            hurt_sound.play()
+            if hurt_sound:
+                hurt_sound.play()
 
 class Platform(pygame.sprite.Sprite):
     def __init__(self, x, y, w, h, moving=False, speed=0):
@@ -122,7 +139,6 @@ class Fireball(pygame.sprite.Sprite):
         if self.rect.top > HEIGHT:
             self.kill()
 
-# Уровни
 levels = [
     {
         "platforms": [
@@ -164,7 +180,6 @@ levels = [
 ]
 
 current_level = 0
-
 player = Player(100, 500)
 player_group = pygame.sprite.Group(player)
 platform_group = pygame.sprite.Group()
@@ -176,7 +191,6 @@ lives = 3
 paused = False
 last_fireball_time = pygame.time.get_ticks()
 
-
 def load_level(index):
     platform_group.empty()
     coin_group.empty()
@@ -186,13 +200,11 @@ def load_level(index):
     for c in levels[index]["coins"]:
         coin_group.add(c)
 
-
 def draw_ui():
     screen.blit(font.render(f"Счёт: {score}", True, BLACK), (10, 10))
     screen.blit(font.render(f"Жизни: {lives}", True, BLACK), (10, 40))
     if paused:
         screen.blit(font.render("Пауза", True, BLACK), (WIDTH//2 - 40, HEIGHT//2))
-
 
 def show_game_over():
     screen.fill(BLACK)
@@ -201,19 +213,27 @@ def show_game_over():
     pygame.display.flip()
     pygame.time.delay(2000)
 
-
 def show_level_transition(level_number):
-    screen.fill(SKY_BLUE)
-    text = font.render(f"Уровень {level_number + 1}", True, BLACK)
-    screen.blit(text, (WIDTH // 2 - 60, HEIGHT // 2))
+    screen.fill(BLACK)
+    title = font.render(f"Уровень {level_number + 1}", True, WHITE)
+    hint = font.render("Нажмите ПРОБЕЛ, чтобы начать", True, WHITE)
+    screen.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 2 - 30))
+    screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT // 2 + 10))
     pygame.display.flip()
-    pygame.time.delay(2000)
 
+    waiting = True
+    while waiting:
+        clock.tick(FPS)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                waiting = False
 
 load_level(current_level)
 show_level_transition(current_level)
 
-# Главный цикл игры
 running = True
 while running:
     clock.tick(FPS)
@@ -235,7 +255,8 @@ while running:
 
         for coin in pygame.sprite.spritecollide(player, coin_group, True):
             score += 10
-            coin_sound.play()
+            if coin_sound:
+                coin_sound.play()
 
         current_interval = levels[current_level]["fireball_interval"]
         if pygame.time.get_ticks() - last_fireball_time > current_interval:
@@ -250,27 +271,34 @@ while running:
                 player.rect.topleft = (100, 500)
             if lives <= 0:
                 lives = 0
-                game_over_sound.play()
+                if game_over_sound:
+                    game_over_sound.play()
                 show_game_over()
                 running = False
 
-        if not coin_group and current_level < len(levels) - 1:
-            current_level += 1
-            show_level_transition(current_level)
-            load_level(current_level)
-            player.rect.topleft = (100, 500)
-            player.vel_y = 0
-            last_fireball_time = pygame.time.get_ticks()
+        if not coin_group:
+            if current_level < len(levels) - 1:
+                current_level += 1
+                show_level_transition(current_level)
+                load_level(current_level)
+                player.rect.topleft = (100, 500)
+                player.vel_y = 0
+                last_fireball_time = pygame.time.get_ticks()
+            else:
+                screen.fill(SKY_BLUE)
+                text = font.render("Вы прошли игру!", True, BLACK)
+                screen.blit(text, (WIDTH // 2 - 80, HEIGHT // 2))
+                pygame.display.flip()
+                pygame.time.delay(3000)
+                running = False
 
     screen.fill(SKY_BLUE)
     platform_group.draw(screen)
     coin_group.draw(screen)
     fireball_group.draw(screen)
     player_group.draw(screen)
-
     draw_ui()
     pygame.display.flip()
 
 pygame.quit()
 sys.exit()
-
