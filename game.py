@@ -44,21 +44,15 @@ except:
 def load_image(path, fallback_size):
     try:
         return pygame.transform.scale(pygame.image.load(path).convert_alpha(), fallback_size)
-    except FileNotFoundError:
+    except:
         print(f"Не удалось загрузить {path}")
         return pygame.Surface(fallback_size, pygame.SRCALPHA)
 
-# --- Обработать проблему с отсутствием изображений ---
-try:
-    BACKGROUND_IMG = load_image("images/background.png", (WIDTH, HEIGHT))
-    PLAYER_NORMAL_IMG = load_image("images/cat_basic.png", (60, 60))
-    PLAYER_BURNED_IMG = load_image("images/cat_burned_f3.png", (60, 60))
-    COIN_IMG = load_image("images/coin.png", (20, 20))
-    FIREBALL_IMG = load_image("images/fireball.png", (30, 30))
-except Exception as e:
-    print(f"Ошибка при загрузке изображений: {e}")
-    pygame.quit()
-    sys.exit()
+BACKGROUND_IMG = load_image("images/background.png", (WIDTH, HEIGHT))
+PLAYER_NORMAL_IMG = load_image("images/cat_cleaned.png", (60, 60))
+PLAYER_BURNED_IMG = load_image("images/cat_burned_f3.png", (60, 60))
+COIN_IMG = load_image("images/coin.png", (20, 20))
+FIREBALL_IMG = load_image("images/fireball.png", (30, 30))
 
 PLAYER_MASK = pygame.mask.from_surface(PLAYER_NORMAL_IMG)
 COIN_MASK = pygame.mask.from_surface(COIN_IMG)
@@ -75,37 +69,28 @@ class Player(pygame.sprite.Sprite):
         self.on_ground = False
         self.burned = False
         self.burned_time = 0
-        self.platform_dx = 0  # Добавлено из второй версии
 
     def update(self, keys):
-        # Проверяем, если игрок "сгорел", и прошло больше 2 секунд, сбрасываем состояние
         if self.burned and pygame.time.get_ticks() - self.burned_time >= 2000:
             self.image = PLAYER_NORMAL_IMG
             self.mask = pygame.mask.from_surface(self.image)
             self.burned = False
 
         dx = 0
-        if keys[pygame.K_a]:
-            dx = -player_speed
-        if keys[pygame.K_d]:
-            dx = player_speed
+        if keys[pygame.K_a]: dx = -player_speed
+        if keys[pygame.K_d]: dx = player_speed
 
-        # Добавляем силу тяжести
         self.vel_y += gravity
         dy = self.vel_y
-        self.on_ground = False
 
-        # Проверка столкновений с платформами
-        future_rect = self.rect.move(0, dy)
-        for platform in platform_group:
-            if platform.rect.colliderect(future_rect):
-                # Игрок падает сверху на платформу
-                if self.vel_y > 0 and self.rect.bottom <= platform.rect.top + 10:
-                    dy = platform.rect.top - self.rect.bottom
+        self.on_ground = False
+        for p in platform_group:
+            if p.rect.colliderect(self.rect.x, self.rect.y + dy, self.rect.width, self.rect.height):
+                if self.vel_y > 0 and self.rect.bottom <= p.rect.top + 10:
+                    dy = p.rect.top - self.rect.bottom
                     self.vel_y = 0
                     self.on_ground = True
 
-        # Обновляем позицию игрока
         self.rect.x += dx
         self.rect.x = max(0, min(WIDTH - self.rect.width, self.rect.x))
         self.rect.y += dy
@@ -151,14 +136,12 @@ class Fireball(pygame.sprite.Sprite):
         if self.rect.top > HEIGHT:
             self.kill()
 
-
 # --- Генерация уровней ---
-def can_reach(prev_platform, new_platform):
-    dx = abs(new_platform.rect.centerx - prev_platform.rect.centerx)
-    dy = prev_platform.rect.top - new_platform.rect.top  # сравнение по верхним границам
+def can_reach(p1, p2):
+    dx = abs(p1.rect.centerx - p2.rect.centerx)
+    dy = p1.rect.top - p2.rect.top
     return dx <= MAX_HORIZONTAL_DISTANCE and MIN_VERTICAL_PLATFORM_GAP <= dy <= MAX_JUMP_HEIGHT
 
-#<<<<<<< HEAD
 def coin_is_reachable(platform, coin):
     sim_steps = 60
     time_step = 1 / FPS
@@ -169,16 +152,6 @@ def coin_is_reachable(platform, coin):
     vy = jump_power
     x = start_x
     y = start_y
-#=======
-
-# # Логика проверок
-#
-# def coin_is_reachable(platform, coin):
-#     dy = platform.rect.top - coin.rect.centery
-#     dx = abs(coin.rect.centerx - platform.rect.centerx)
-#
-#     return 0 <= dy <= MAX_JUMP_HEIGHT and dx <= MAX_HORIZONTAL_DISTANCE
-#>>>>>>> Skynet_name
 
     for _ in range(sim_steps):
         x += vx
