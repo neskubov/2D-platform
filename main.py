@@ -1,4 +1,5 @@
 import pygame
+import os
 import sys
 import random
 
@@ -28,14 +29,25 @@ pygame.display.set_caption("Платформер: Все монетки дост
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("Arial", 24)
 
+def resource_path(relative_path):
+    """ Возвращает абсолютный путь к ресурсу, работает для .exe и скрипта. """
+    try:
+        # Если программа запущена из .exe
+        base_path = sys._MEIPASS
+    except AttributeError:
+        # Если программа запущена из исходного кода
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
 # Звук
 sound_enabled = False
 try:
     pygame.mixer.init()
-    jump_sound = pygame.mixer.Sound("sounds/jump.wav")
-    coin_sound = pygame.mixer.Sound("sounds/coin.wav")
-    hurt_sound = pygame.mixer.Sound("sounds/hurt.wav")
-    game_over_sound = pygame.mixer.Sound("sounds/game_over.wav")
+    jump_sound = pygame.mixer.Sound(resource_path("sounds/jump.wav"))
+    coin_sound = pygame.mixer.Sound(resource_path("sounds/coin.wav"))
+    hurt_sound = pygame.mixer.Sound(resource_path("sounds/hurt.wav"))
+    game_over_sound = pygame.mixer.Sound(resource_path("sounds/game_over.wav"))
     sound_enabled = True
 except:
     print("Звуки не загружены")
@@ -43,7 +55,7 @@ except:
 # --- Загрузка изображений ---
 def load_image(path, fallback_size):
     try:
-        return pygame.transform.scale(pygame.image.load(path).convert_alpha(), fallback_size)
+        return pygame.transform.scale(pygame.image.load(resource_path(path)).convert_alpha(), fallback_size)
     except FileNotFoundError:
         print(f"Не удалось загрузить {path}")
         return pygame.Surface(fallback_size, pygame.SRCALPHA)
