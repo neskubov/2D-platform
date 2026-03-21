@@ -11,14 +11,16 @@
    ```bash
    git clone https://github.com/neskubov/2D-platform.git
    cd 2D-platform
+    ```
    
 2. Установите зависимости:
 
     ```bash
     pip install -r requirements.txt
     Запустите игру:
+   ```
 
-3.Запустите игру:
+3. Запустите игру:
     ```bash
     python main.py
 
