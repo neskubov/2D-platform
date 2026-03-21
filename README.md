@@ -17,7 +17,6 @@
 
     ```bash
     pip install -r requirements.txt
-    Запустите игру:
    ```
 
 3. Запустите игру:
